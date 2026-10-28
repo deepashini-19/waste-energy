@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Energy-Waste Discovery Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg:#070d1c;--panel:#0f1a30;--sidebar:#050a15;--green:#10b981;--purple:#8b5cf6;--blue:#38a1ff;--orange:#f5a623;--red:#ef4444;--text:#f1f5f9;--muted:#94a3b8;--border:#24344f}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:radial-gradient(circle at 20% 0%,#10224a 0%,var(--bg) 55%);color:var(--text);display:flex;min-height:100vh}
+.sidebar{width:260px;background:var(--sidebar);padding:24px;border-right:1px solid var(--border);flex-shrink:0}
+.logo{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--green)}
+.sidebar p{font-size:12px;color:var(--muted);margin:4px 0 28px}
+.sidebar nav a{color:var(--muted);padding:12px 16px;border-radius:10px;display:block;margin-bottom:6px;font-weight:500;cursor:pointer;transition:.2s}
+.sidebar nav a.active,.sidebar nav a:hover{background:var(--panel);color:#fff;border-left:4px solid var(--green);padding-left:12px}
+.main{flex:1;padding:36px;max-width:1250px;margin:0 auto;width:100%}
+.page{display:none}.page.active{display:block}
+h1{margin:0 0 6px;font-size:34px;font-weight:800}
+h1 .grad{background:linear-gradient(90deg,#fff,#34d399 60%,#38bdf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.muted{color:var(--muted);margin:0;font-size:15px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;margin:26px 0}
+.card,.panel{background:var(--panel);padding:22px;border-radius:16px;border:1.5px solid var(--border)}
+.card .num-badge{width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#fff;margin-bottom:10px}
+.c-green{border-color:var(--green);box-shadow:0 0 18px rgba(16,185,129,.25)}.c-green .num-badge{background:var(--green)}
+.c-purple{border-color:var(--purple);box-shadow:0 0 18px rgba(139,92,246,.25)}.c-purple .num-badge{background:var(--purple)}
+.c-blue{border-color:var(--blue);box-shadow:0 0 18px rgba(56,161,255,.25)}.c-blue .num-badge{background:var(--blue)}
+.c-orange{border-color:var(--orange);box-shadow:0 0 18px rgba(245,166,35,.25)}.c-orange .num-badge{background:var(--orange)}
+.card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.number{font-size:32px;font-weight:700;margin-top:8px}
+.unit{font-size:14px;font-weight:400;color:var(--muted)}
+.panel{margin:22px 0}
+.panel h2{margin:0 0 18px;font-size:18px;border-bottom:1px solid var(--border);padding-bottom:8px}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}
+.chart-box{background:rgba(0,0,0,.2);padding:16px;border-radius:12px;border:1px solid var(--border)}
+.chart-box h3{font-size:14px;color:var(--muted);margin:0 0 10px}
+.chart-container{position:relative;height:260px;width:100%}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:14px 16px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);font-size:12px;text-transform:uppercase}
+.badge{padding:4px 10px;border-radius:6px;font-weight:600;font-size:12px}
+.badge.alert{color:var(--orange);background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3)}
+.badge.ok{color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3)}
+.on{color:var(--green)}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:22px 0}
+.step{background:linear-gradient(135deg,#0d2a2a,#0f1a30);border:1.5px solid var(--green);border-radius:14px;padding:16px;position:relative}
+.step:nth-child(2){border-color:var(--purple);background:linear-gradient(135deg,#1c1640,#0f1a30)}
+.step:nth-child(3){border-color:var(--blue);background:linear-gradient(135deg,#0d2145,#0f1a30)}
+.step:nth-child(4){border-color:var(--green)}
+.step h4{margin:0 0 6px;font-size:18px}.step p{margin:0;color:var(--muted);font-size:13px}
+.step .ic{font-size:26px;margin-bottom:6px}
+.prio{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.prio:last-child{border:0}
+.tag{min-width:72px;text-align:center;padding:4px 10px;border-radius:8px;font-weight:700;font-size:13px;color:#fff}
+.tag.High{background:#e11d48}.tag.Medium{background:var(--orange);color:#111}.tag.Low{background:var(--green)}
+.prio small{color:var(--muted);display:block}
+.bcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:18px}
+.bcard{text-align:center}
+.bcard .big{font-size:40px}
+.formula{background:rgba(0,0,0,.35);padding:16px;border-radius:10px;border-left:4px solid var(--green);font-family:'Courier New',monospace;margin-bottom:8px;color:#38bdf8;font-size:14px}
+.note{color:var(--muted);font-size:13px;margin:0 0 22px}
+input.f{background:#070d1c;color:#fff;border:1px solid var(--border);padding:8px;border-radius:8px}
+button.b{background:var(--green);color:#fff;border:0;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:600}
+@media(max-width:768px){body{flex-direction:column}.sidebar{width:100%}.main{padding:18px}h1{font-size:26px}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">🍃 Campus Energy-Waste</div>
+  <p>Discovery Dashboard</p>
+  <nav>
+    <a id="btn-overview" class="active" onclick="showTab('overview')">Overview</a>
+    <a id="btn-energy" onclick="showTab('energy')">Energy</a>
+    <a id="btn-waste" onclick="showTab('waste')">Waste</a>
+    <a id="btn-buildings" onclick="showTab('buildings')">Buildings</a>
+    <a id="btn-reports" onclick="showTab('reports')">Reports</a>
+    <a id="btn-formulas" onclick="showTab('formulas')">Formulas</a>
+    <a id="btn-settings" onclick="showTab('settings')">Settings</a>
+  </nav>
+</aside>
+
+<main class="main">
+
+  <!-- OVERVIEW -->
+  <div id="view-overview" class="page active">
+    <h1><span class="grad">Overview</span></h1>
+    <p class="muted">Smarter insights. Greater campus impact.</p>
+    <div class="cards">
+      <div class="card c-green"><span class="num-badge">1</span><div class="card-title">Total Energy Used</div><div class="number" id="kpiEnergy"></div></div>
+      <div class="card c-purple"><span class="num-badge">2</span><div class="card-title">Potential Waste</div><div class="number" id="kpiWaste"></div></div>
+      <div class="card c-blue"><span class="num-badge">3</span><div class="card-title">Rooms Flagged</div><div class="number" id="kpiRooms"></div></div>
+      <div class="card c-orange"><span class="num-badge">4</span><div class="card-title">Potential Cost Savings</div><div class="number" id="kpiSavings"></div></div>
+    </div>
+
+    <div class="flow">
+      <div class="step"><div class="ic">📈</div><h4>Monitor</h4><p>Track energy use and spot patterns.</p></div>
+      <div class="step"><div class="ic">🔍</div><h4>Detect</h4><p>Flag anomalies and unusual loads.</p></div>
+      <div class="step"><div class="ic">📋</div><h4>Investigate</h4><p>Check causes, review schedules, inspect systems.</p></div>
+      <div class="step"><div class="ic">✅</div><h4>Verify</h4><p>Confirm savings against a suitable baseline.</p></div>
+    </div>
+
+    <div class="panel">
+      <h2>Action Checklist</h2>
+      <div id="actions"></div>
+    </div>
+  </div>
+
+  <!-- ENERGY -->
+  <div id="view-energy" class="page">
+    <h1><span class="grad">Energy Trends</span></h1>
+    <p class="muted">Hourly, daily and weekly consumption.</p>
+    <div class="panel">
+      <h2>📊 Consumption Graphs</h2>
+      <div class="charts-grid">
+        <div class="chart-box"><h3>Hourly Consumption (kW) – after-hours points in red</h3><div class="chart-container"><canvas id="chartHourly"></canvas></div></div>
+        <div class="chart-box"><h3>Daily Consumption (kWh)</h3><div class="chart-container"><canvas id="chartDaily"></canvas></div></div>
+        <div class="chart-box"><h3>Weekly Consumption (MWh)</h3><div class="chart-container"><canvas id="chartWeekly"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WASTE -->
+  <div id="view-waste" class="page">
+    <h1><span class="grad">Campus Lab &amp; Room Waste Detection</span></h1>
+    <p class="muted">Rule: room empty + lights or HVAC ON = possible waste.</p>
+    <div class="panel">
+      <h2>Room Evaluation Table</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Room</th><th>Occupied</th><th>Lighting</th><th>HVAC</th><th>Usage</th><th>Finding</th></tr></thead>
+          <tbody id="wasteBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUILDINGS -->
+  <div id="view-buildings" class="page">
+    <h1><span class="grad">Buildings</span></h1>
+    <p class="muted">Fair benchmarking: size, use and schedule considered.</p>
+    <div class="panel">
+      <h2>🥧 Consumption by Building</h2>
+      <div class="chart-box"><div class="chart-container" style="height:340px"><canvas id="chartBuildings"></canvas></div></div>
+      <div class="bcards" id="bcards"></div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div id="view-reports" class="page">
+    <h1><span class="grad">Reports</span></h1>
+    <p class="muted">Summary of findings.</p>
+    <div class="panel">
+      <h2>Summary Report</h2>
+      <p id="reportText" style="line-height:1.7;color:var(--muted)"></p>
+      <button class="b" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <!-- FORMULAS -->
+  <div id="view-formulas" class="page">
+    <h1><span class="grad">Formulas</span></h1>
+    <p class="muted">Calculations used in this dashboard.</p>
+    <div class="panel">
+      <h2>📐 Formula Sheet</h2>
+      <div class="formula">Energy (kWh) = Power (kW) × Time (hours)</div>
+      <p class="note">Hourly, daily and weekly energy totals.</p>
+      <div class="formula">Normalized Use (kWh/m²) = Building kWh ÷ Floor Area (m²)</div>
+      <p class="note">Fair benchmarking between buildings of different size.</p>
+      <div class="formula">Potential Waste Energy (kWh) = Σ (Load of empty rooms with lights/HVAC ON × Hours ON)</div>
+      <p class="note">Applied only to rooms flagged by the waste rule.</p>
+      <div class="formula">CO₂ Waste (kg) = Wasted Energy (kWh) × Emission Factor (kg CO₂/kWh)</div>
+      <p class="note">Emission factor depends on the local grid.</p>
+      <div class="formula">Cost Savings (₹) = Wasted Energy (kWh) × Tariff (₹/kWh)</div>
+      <p class="note">Tariff as per your electricity bill.</p>
+      <div class="formula">Building Share (%) = Building kWh ÷ Total kWh × 100</div>
+      <p class="note">Used for the Buildings pie chart.</p>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="view-settings" class="page">
+    <h1><span class="grad">Settings</span></h1>
+    <p class="muted">Change the headline values and the dashboard updates.</p>
+    <div class="panel">
+      <h2>Customization</h2>
+      <p>Total Energy Used (kWh): <input class="f" type="number" id="setEnergy"></p>
+      <p>Potential Waste (kWh): <input class="f" type="number" id="setWaste"></p>
+      <p>Potential Cost Savings (₹): <input class="f" type="number" id="setSavings"></p>
+      <button class="b" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ===================== YOUR DATA — EDIT HERE ===================== */
+const data = {
+  totalEnergy: 482350,   // kWh
+  potentialWaste: 12480, // kWh
+  savings: 3450,         // ₹
+  hourly: { labels: ['12am','1am','2am','3am','4am','5am','6am','7am','8am','9am','10am','11am','12pm','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm','9pm','10pm','11pm'],
+            values: [40,38,36,35,36,42,60,95,140,165,175,180,170,172,168,160,145,120,95,80,70,60,50,44] },
+  daily:  { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], values: [16800,17200,16950,17500,16400,9800,8200] },
+  weekly: { labels: ['Week 1','Week 2','Week 3','Week 4'], values: [118.2,121.5,119.8,122.9] },
+  buildings: [
+    { name:'Building A', type:'Academic', area:12000, hours:'8am – 6pm', kwh:168350, icon:'🏢', color:'#38a1ff' },
+    { name:'Building B', type:'Lab',      area:8000,  hours:'8am – 8pm', kwh:126000, icon:'🏬', color:'#8b5cf6' },
+    { name:'Building C', type:'Hostel',   area:15000, hours:'24/7',      kwh:188000, icon:'🏨', color:'#10b981' }
+  ],
+  actions: [
+    { level:'High',   building:'Building A', notes:['Overnight HVAC load','Check scheduling'] },
+    { level:'Medium', building:'Building B', notes:['High daytime usage','Inspect equipment'] },
+    { level:'Low',    building:'Building C', notes:['Slight deviation','Monitor next cycle'] }
+  ],
+  rooms: [
+    { name:'Campus Electronics Lab', occupied:false, lights:true, hvac:true,  usage:18 },
+    { name:'Main Lecture Hall 201',  occupied:true,  lights:true, hvac:true,  usage:30 },
+    { name:'Central Library Wing',   occupied:true,  lights:true, hvac:false, usage:12 },
+    { name:'Bio-Research Lab B',     occupied:false, lights:true, hvac:true,  usage:22 },
+    { name:'Computer Lab 3',         occupied:false, lights:true, hvac:false, usage:15 }
+  ]
+};
+/* ================================================================= */
+
+const fmt = n => Number(n).toLocaleString('en-IN');
+const isWaste = r => !r.occupied && (r.lights || r.hvac);
+
+function loadSaved(){
+  try{ const s=JSON.parse(localStorage.getItem('dashSettings')||'null');
+       if(s){data.totalEnergy=s.e;data.potentialWaste=s.w;data.savings=s.s;} }catch(e){}
+}
+
+function renderKPIs(){
+  const n = data.rooms.filter(isWaste).length;
+  document.getElementById('kpiEnergy').innerHTML = fmt(data.totalEnergy)+' <span class="unit">kWh</span>';
+  document.getElementById('kpiWaste').innerHTML = fmt(data.potentialWaste)+' <span class="unit">kWh</span>';
+  document.getElementById('kpiRooms').innerHTML = n+' <span class="unit">Rooms</span>';
+  document.getElementById('kpiSavings').textContent = '₹'+fmt(data.savings);
+  document.getElementById('reportText').textContent =
+    'Total campus consumption is '+fmt(data.totalEnergy)+' kWh. '+n+' rooms are flagged for possible waste, representing about '+
+    fmt(data.potentialWaste)+' kWh of potential waste and ₹'+fmt(data.savings)+' in potential savings.';
+  document.getElementById('setEnergy').value = data.totalEnergy;
+  document.getElementById('setWaste').value = data.potentialWaste;
+  document.getElementById('setSavings').value = data.savings;
+}
+
+function renderTable(){
+  const dot = on => on ? '<span class="on">● ON</span>' : '⚪ OFF';
+  document.getElementById('wasteBody').innerHTML = data.rooms.map(r => `
+    <tr><td><b>${r.name}</b></td>
+    <td>${r.occupied?'👤 Occupied':'❌ Empty'}</td><td>${dot(r.lights)}</td><td>${dot(r.hvac)}</td>
+    <td>${r.usage} kWh/day</td>
+    <td>${isWaste(r)?'<span class="badge alert">Check possible waste</span>':'<span class="badge ok">No rule triggered</span>'}</td></tr>`).join('');
+}
+
+function renderBuildings(){
+  document.getElementById('bcards').innerHTML = data.buildings.map(b => `
+    <div class="card bcard" style="border-color:${b.color}">
+      <div class="big">${b.icon}</div>
+      <b>${b.name}</b> <span class="muted">(${b.type})</span>
+      <div class="number" style="font-size:24px">${(b.kwh/b.area).toFixed(2)} <span class="unit">kWh/m²</span></div>
+      <div class="muted">${fmt(b.area)} m² · ${b.hours}</div>
+    </div>`).join('');
+  document.getElementById('actions').innerHTML = data.actions.map(a => `
+    <div class="prio"><span class="tag ${a.level}">${a.level}</span>
+    <div><b>${a.building}</b><small>${a.notes.map(x=>'• '+x).join('  ')}</small></div></div>`).join('');
+}
+
+function saveSettings(){
+  data.totalEnergy=+document.getElementById('setEnergy').value;
+  data.potentialWaste=+document.getElementById('setWaste').value;
+  data.savings=+document.getElementById('setSavings').value;
+  try{localStorage.setItem('dashSettings',JSON.stringify({e:data.totalEnergy,w:data.potentialWaste,s:data.savings}));}catch(e){}
+  renderKPIs(); alert('Saved!');
+}
+
+/* ---------- Charts: built the first time their page opens ---------- */
+const made = {};
+Chart.defaults.color = '#94a3b8';
+const axes = { maintainAspectRatio:false, plugins:{legend:{display:false}},
+  scales:{ x:{grid:{color:'#24344f'}}, y:{grid:{color:'#24344f'}, beginAtZero:true} } };
+
+function makeCharts(tab){
+  if(made[tab] || typeof Chart==='undefined') return;
+  if(tab==='energy'){
+    const night = data.hourly.labels.map((_,i)=> i<=5);
+    new Chart(document.getElementById('chartHourly'),{type:'line',
+      data:{labels:data.hourly.labels,datasets:[{label:'kW',data:data.hourly.values,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.18)',fill:true,tension:.35,
+        pointBackgroundColor:night.map(n=>n?'#ef4444':'#8b5cf6'),pointRadius:night.map(n=>n?5:3)}]},options:axes});
+    new Chart(document.getElementById('chartDaily'),{type:'bar',
+      data:{labels:data.daily.labels,datasets:[{label:'kWh',data:data.daily.values,backgroundColor:'#10b981',borderRadius:6}]},options:axes});
+    new Chart(document.getElementById('chartWeekly'),{type:'bar',
+      data:{labels:data.weekly.labels,datasets:[{label:'MWh',data:data.weekly.values,backgroundColor:'#38a1ff',borderRadius:6}]},options:axes});
+  }
+  if(tab==='buildings'){
+    new Chart(document.getElementById('chartBuildings'),{type:'pie',
+      data:{labels:data.buildings.map(b=>b.name+' ('+b.type+')'),
+        datasets:[{data:data.buildings.map(b=>b.kwh),backgroundColor:data.buildings.map(b=>b.color),borderColor:'#0f1a30',borderWidth:3}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{position:'right'}}}});
+  }
+  made[tab]=true;
+}
+
+function showTab(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sidebar nav a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('btn-'+name).classList.add('active');
+  makeCharts(name);
+}
+
+loadSaved(); renderKPIs(); renderTable(); renderBuildings();
+</script>
+</body>
+</html>
